@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Bomber - Retro Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #0a0a2e, #1a1a4e);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        #gameContainer {
+            position: relative;
+        }
+        
+        #gameCanvas {
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            cursor: crosshair;
+        }
+        
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            margin: 15px 0;
+            font-size: 1.2em;
+        }
+        
+        #score, #lives {
+            text-shadow: 0 0 5px currentColor;
+        }
+        
+        #score span { color: #ffff00; }
+        #lives span { color: #ff6666; }
+        
+        #instructions {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid #00ff00;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        #instructions h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+        }
+        
+        #instructions p {
+            margin: 5px 0;
+        }
+        
+        #highScores {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid #ffff00;
+            margin-top: 15px;
+        }
+        
+        #highScores h3 {
+            color: #ffff00;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        #highScoresList {
+            list-style: none;
+        }
+        
+        #highScoresList li {
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 0, 0.2);
+        }
+        
+        #highScoresList li:nth-child(1) { color: #ffd700; }
+        #highScoresList li:nth-child(2) { color: #c0c0c0; }
+        #highScoresList li:nth-child(3) { color: #cd7f32; }
+        
+        #gameOver, #nameEntry {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #ff0000;
+            text-align: center;
+            display: none;
+        }
+        
+        #gameOver h2 {
+            color: #ff0000;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        
+        #nameEntry {
+            border-color: #ffff00;
+        }
+        
+        #nameEntry h2 {
+            color: #ffff00;
+        }
+        
+        #nameEntry input {
+            padding: 10px;
+            font-size: 1.2em;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            text-align: center;
+            margin: 15px 0;
+            width: 200px;
+        }
+        
+        button {
+            padding: 10px 25px;
+            font-size: 1em;
+            background: #00ff00;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
+        }
+        
+        #startBtn {
+            background: #00ffff;
+        }
+        
+        #startBtn:hover {
+            background: #00cccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 CITY BOMBER 🎮</h1>
+    
+    <div id="ui">
+        <div id="score">SCORE: <span id="scoreValue">0</span></div>
+        <div id="lives">LIVES: <span id="livesValue">3</span></div>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="gameOver">
+            <h2>GAME OVER!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="restartBtn">Play Again</button>
+        </div>
+        <div id="nameEntry">
+            <h2>🏆 NEW HIGH SCORE! 🏆</h2>
+            <p>Score: <span id="newScore">0</span></p>
+            <p>Enter your name:</p>
+            <input type="text" id="playerName" maxlength="10" placeholder="YOUR NAME">
+            <br>
+            <button id="submitScore">Submit</button>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <h3>HOW TO PLAY</h3>
+        <p>🛩️ Plane flies across the top - drops one level each pass</p>
+        <p>🏢 Buildings have different heights - destroy them all!</p>
+        <p>🦍 BONUS: Shoot the gorilla for extra points!</p>
+        <p><strong>CONTROLS: CLICK to shoot bombs | SPACEBAR to drop bombs</p>
+    </div>
+    
+    <div id="highScores">
+        <h3>🏆 TOP 10 SCORES 🏆</h3>
+        <ol id="highScoresList"></ol>
+    </div>
+
+    <script>
+        // Game Constants
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 500;
+        
+        // Game State
+        let gameState = 'playing'; // playing, gameOver, nameEntry
+        let score = 0;
+        let lives = 3;
+        let planeY = 50;
+        let planeDirection = 1;
+        let planeX = 0;
+        let planeSpeed = 2;
+        
+        // Buildings
+        let buildings = [];
+        let buildingColors = ['#4a4a4a', '#5a5a5a', '#6a6a6a', '#7a7a7a'];
+        let windowColors = ['#ffff00', '#ffaa00', '#ffffff'];
+        
+        // Gorilla
+        let gorilla = {
+            x: 100,
+            y: 0,
+            width: 40,
+            height: 50,
+            speed: 1,
+            direction: 1,
+            onBuilding: 0,
+            climbing: false,
+            alive: true
+        };
+        
+        // Bombs (from player)
+        let bombs = [];
+        let bombSpeed = 5;
+        
+        // Explosions
+        let explosions = [];
+        
+        // High Scores
+        let highScores = JSON.parse(localStorage.getItem('cityBomberHighScores')) || [];
+        
+        // Initialize Game
+        function init() {
+            generateBuildings();
+            updateHighScoresDisplay();
+            gameLoop();
+        }
+        
+        // Generate Buildings
+        function generateBuildings() {
+            buildings = [];
+            let x = 0;
+            while (x < CANVAS_WIDTH) {
+                const width = 60 + Math.random() * 40;
+                const height = 100 + Math.random() * 250;
+                buildings.push({
+                    x: x,
+                    y: CANVAS_HEIGHT - height,
+                    width: width,
+                    height: height,
+                    color: buildingColors[Math.floor(Math.random() * buildingColors.length)],
+                    windows: generateWindows(width, height),
+                    destroyed: false,
+                    originalHeight: height
+                });
+                x += width;
+            }
+            
+            // Position gorilla on first building
+            if (buildings.length > 0) {
+                gorilla.y = buildings[0].y - gorilla.height;
+                gorilla.onBuilding = 0;
+            }
+        }
+        
+        // Generate Windows for a Building
+        function generateWindows(buildingWidth, buildingHeight) {
+            const windows = [];
+            const windowWidth = 8;
+            const windowHeight = 10;
+            const spacing = 15;
+            
+            for (let y = 20; y < buildingHeight - 20; y += spacing) {
+                for (let x = 10; x < buildingWidth - 15; x += spacing) {
+                    windows.push({
+                        x: x,
+                        y: y,
+                        lit: Math.random() > 0.3
+                    });
+                }
+            }
+            return windows;
+        }
+        
+        // Draw Plane
+        function drawPlane() {
+            ctx.save();
+            ctx.translate(planeX, planeY);
+            
+            // Plane body
+            ctx.fillStyle = '#00aaff';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 30, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Wings
+            ctx.fillStyle = '#0088cc';
+            ctx.fillRect(-15, -5, 30, 2);
+            ctx.fillRect(-15, 3, 30, 2);
+            
+            // Cockpit
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(20, 0, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Draw Buildings
+        function drawBuildings() {
+            buildings.forEach((building, index) => {
+                if (building.destroyed) return;
+                
+                // Building body
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, building.y, building.width, building.height);
+                
+                // Building outline
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(building.x, building.y, building.width, building.height);
+                
+                // Windows
+                building.windows.forEach(window => {
+                    if (!window.lit) return;
+                    ctx.fillStyle = windowColors[Math.floor(Math.random() * windowColors.length)];
+                    ctx.fillRect(building.x + window.x, building.y + window.y, 6, 8);
+                });
+            });
+        }
+        
+        // Draw Gorilla
+        function drawGorilla() {
+            if (!gorilla.alive) return;
+            
+            ctx.save();
+            ctx.translate(gorilla.x, gorilla.y);
+            
+            // Body
+            ctx.fillStyle = '#4a3728';
+            ctx.fillRect(5, 15, 30, 35);
+            
+            // Head
+            ctx.fillStyle = '#5a4738';
+            ctx.beginPath();
+            ctx.arc(20, 10, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(15, 8, 3, 0, Math.PI * 2);
+            ctx.arc(25, 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Arms
+            ctx.fillStyle = '#4a3728';
+            ctx.fillRect(0, 20, 5, 25);
+            ctx.fillRect(35, 20, 5, 25);
+            
+            // Legs
+            ctx.fillRect(10, 45, 8, 10);
+            ctx.fillRect(22, 45, 8, 10);
+            
+            ctx.restore();
+        }
+        
+        // Draw Bombs
+        function drawBombs() {
+            ctx.fillStyle = '#ff0000';
+            bombs.forEach(bomb => {
+                ctx.beginPath();
+                ctx.arc(bomb.x, bomb.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bomb trail
+                ctx.fillStyle = 'rgba(255, 100, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(bomb.x, bomb.y - 10, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Draw Explosions
+        function drawExplosions() {
+            explosions.forEach((exp, index) => {
+                ctx.fillStyle = `rgba(255, ${exp.frame * 20}, 0, ${1 - exp.frame / 20})`;
+                ctx.beginPath();
+                ctx.arc(exp.x, exp.y, exp.frame * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                exp.frame++;
+                if (exp.frame > 20) {
+                    explosions.splice(index, 1);
+                }
+            });
+        }
+        
+        // Draw Ground
+        function drawGround() {
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(0, CANVAS_HEIGHT - 10, CANVAS_WIDTH, 10);
+        }
+        
+        // Update Plane
+        function updatePlane() {
+            planeX += planeSpeed * planeDirection;
+            
+            if (planeX > CANVAS_WIDTH + 30) {
+                planeDirection = -1;
+                planeY += 30; // Drop one level
+                
+                if (planeY > CANVAS_HEIGHT - 100) {
+                    // Plane hit ground - game over
+                    endGame();
+                }
+            } else if (planeX < -30) {
+                planeDirection = 1;
+                planeY += 30; // Drop one level
+                
+                if (planeY > CANVAS_HEIGHT - 100) {
+                    endGame();
+                }
+            }
+        }
+        
+        // Update Gorilla
+        function updateGorilla() {
+            if (!gorilla.alive) return;
+            
+            // Find which building gorilla is on
+            let onBuildingIndex = -1;
+            for (let i = 0; i < buildings.length; i++) {
+                if (!buildings[i].destroyed && 
+                    gorilla.x >= buildings[i].x && 
+                    gorilla.x < buildings[i].x + buildings[i].width) {
+                    onBuildingIndex = i;
+                    break;
+                }
+            }
+            
+            if (onBuildingIndex === -1) {
+                // Gorilla fell - find new building
+                gorilla.alive = false;
+                return;
+            }
+            
+            // Move gorilla
+            gorilla.x += gorilla.speed * gorilla.direction;
+            
+            // Update Y position based on building
+            gorilla.y = buildings[onBuildingIndex].y - gorilla.height;
+            
+            // Reverse direction at edges
+            if (gorilla.x <= buildings[onBuildingIndex].x) {
+                gorilla.direction = 1;
+            } else if (gorilla.x >= buildings[onBuildingIndex].x + buildings[onBuildingIndex].width - gorilla.width) {
+                gorilla.direction = -1;
+            }
+            
+            // Random chance to jump to adjacent building
+            if (Math.random() < 0.002) {
+                const nextBuilding = onBuildingIndex + gorilla.direction;
+                if (nextBuilding >= 0 && nextBuilding < buildings.length && !buildings[nextBuilding].destroyed) {
+                    gorilla.x = buildings[nextBuilding].x + 20;
+                    gorilla.onBuilding = nextBuilding;
+                }
+            }
+        }
+        
+        // Update Bombs
+        function updateBombs() {
+            bombs.forEach((bomb, bombIndex) => {
+                bomb.y += bombSpeed;
+                
+                // Check collision with buildings
+                buildings.forEach((building, buildingIndex) => {
+                    if (building.destroyed) return;
+                    
+                    if (bomb.x > building.x && 
+                        bomb.x < building.x + building.width &&
+                        bomb.y > building.y &&
+                        bomb.y < building.y + building.height) {
+                        
+                        // Hit building
+                        explosions.push({ x: bomb.x, y: bomb.y, frame: 0 });
+                        bombs.splice(bombIndex, 1);
+                        
+                        // Damage building
+                        building.height -= 50;
+                        building.y += 50;
+                        
+                        if (building.height <= 20) {
+                            building.destroyed = true;
+                            score += 100;
+                        } else {
+                            score += 10;
+                        }
+                        
+                        updateScore();
+                    }
+                });
+                
+                // Check collision with gorilla
+                if (gorilla.alive &&
+                    bomb.x > gorilla.x && 
+                    bomb.x < gorilla.x + gorilla.width &&
+                    bomb.y > gorilla.y &&
+                    bomb.y < gorilla.y + gorilla.height) {
+                    
+                    explosions.push({ x: bomb.x, y: bomb.y, frame: 0 });
+                    bombs.splice(bombIndex, 1);
+                    
+                    gorilla.alive = false;
+                    score += 500; // Bonus for gorilla
+                    updateScore();
+                }
+                
+                // Remove if off screen
+                if (bomb.y > CANVAS_HEIGHT) {
+                    bombs.splice(bombIndex, 1);
+                }
+            });
+        }
+        
+        // Drop Bomb
+        function dropBomb() {
+            if (gameState !== 'playing') return;
+            
+            bombs.push({
+                x: planeX,
+                y: planeY + 15
+            });
+        }
+        
+        // Shoot (click on canvas)
+        canvas.addEventListener('click', (e) => {
+            if (gameState !== 'playing') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            bombs.push({ x, y: planeY + 20 });
+        });
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                dropBomb();
+                e.preventDefault();
+            }
+        });
+        
+        // Update Score Display
+        function updateScore() {
+            document.getElementById('scoreValue').textContent = score;
+        }
+        
+        // Update Lives Display
+        function updateLives() {
+            document.getElementById('livesValue').textContent = lives;
+        }
+        
+        // Check Win Condition
+        function checkWin() {
+            const allDestroyed = buildings.every(b => b.destroyed);
+            if (allDestroyed) {
+                score += 1000; // Level complete bonus
+                updateScore();
+                generateBuildings(); // Next level
+                gorilla.alive = true;
+                gorilla.x = buildings[0].x + 20;
+                planeY = 50;
+            }
+        }
+        
+        // End Game
+        function endGame() {
+            gameState = 'gameOver';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Check High Score
+        function checkHighScore() {
+            if (highScores.length < 10 || score > highScores[highScores.length - 1].score) {
+                document.getElementById('newScore').textContent = score;
+                document.getElementById('nameEntry').style.display = 'block';
+                document.getElementById('gameOver').style.display = 'none';
+            }
+        }
+        
+        // Submit High Score
+        document.getElementById('submitScore').addEventListener('click', () => {
+            const name = document.getElementById('playerName').value.toUpperCase() || 'AAA';
+            
+            highScores.push({ name, score, date: new Date().toISOString() });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, 10);
+            
+            localStorage.setItem('cityBomberHighScores', JSON.stringify(highScores));
+            updateHighScoresDisplay();
+            
+            document.getElementById('nameEntry').style.display = 'none';
+            restartGame();
+        });
+        
+        // Update High Scores Display
+        function updateHighScoresDisplay() {
+            const list = document.getElementById('highScoresList');
+            list.innerHTML = '';
+            
+            highScores.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${entry.name} - ${entry.score}`;
+                list.appendChild(li);
+            });
+            
+            if (highScores.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'No scores yet!';
+                list.appendChild(li);
+            }
+        }
+        
+        // Restart Game
+        function restartGame() {
+            gameState = 'playing';
+            score = 0;
+            lives = 3;
+            planeY = 50;
+            planeX = 0;
+            planeDirection = 1;
+            bombs = [];
+            explosions = [];
+            
+            generateBuildings();
+            gorilla.alive = true;
+            gorilla.x = buildings[0].x + 20;
+            
+            updateScore();
+            updateLives();
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+        
+        // Restart Button
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            checkHighScore();
+            if (document.getElementById('nameEntry').style.display !== 'block') {
+                restartGame();
+            }
+        });
+        
+        // Main Game Loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.fillStyle = '#0a0a2e';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Draw stars
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 50; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random() * CANVAS_WIDTH, Math.random() * 200, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            if (gameState === 'playing') {
+                updatePlane();
+                updateGorilla();
+                updateBombs();
+                checkWin();
+            }
+            
+            drawGround();
+            drawBuildings();
+            drawGorilla();
+            drawPlane();
+            drawBombs();
+            drawExplosions();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start Game
+        init();
+    </script>
+</body>
+</html>
