@@ -359,8 +359,8 @@
         
         canvas.addEventListener('click', e => {
             if (gameState !== 'playing' || !bombReady || bombs.length > 0) return;
-            const rect = canvas.getBoundingClientRect();
-            bombs.push({ x: e.clientX - rect.left, y: plane.y + 30 });
+            // Bomb drops from plane position
+            bombs.push({ x: plane.x, y: plane.y + 15 });
             bombReady = false;
             updateBombStatus();
         });
