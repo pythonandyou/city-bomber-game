@@ -216,8 +216,14 @@
             ctx.arc(18, 6, 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#4a3728';
-            ctx.fillRect(-2, 15, 5, 15);
-            ctx.fillRect(27, 15, 5, 15);
+            // Different arm positions when climbing
+            if (gorilla.climbing) {
+                ctx.fillRect(0, 15, 5, 20);
+                ctx.fillRect(25, 15, 5, 20);
+            } else {
+                ctx.fillRect(-2, 15, 5, 15);
+                ctx.fillRect(27, 15, 5, 15);
+            }
             ctx.fillRect(8, 38, 6, 8);
             ctx.fillRect(16, 38, 6, 8);
             ctx.restore();
@@ -225,10 +231,64 @@
         
         function updateGorilla() {
             if (!gorilla.alive) return;
-            gorilla.x += gorilla.speed * gorilla.direction;
-            if (gorilla.x <= 10) gorilla.direction = 1;
-            if (gorilla.x >= CANVAS_WIDTH - gorilla.width - 10) gorilla.direction = -1;
-            gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
+            
+            const gorillaSpeed = gorilla.speed + (level * 0.05);
+            
+            if (gorilla.climbing) {
+                gorilla.climbProgress += 2;
+                
+                if (gorilla.climbProgress >= buildings[gorilla.currentBuilding].height) {
+                    gorilla.y = buildings[gorilla.currentBuilding].y - gorilla.height;
+                    gorilla.climbing = false;
+                    gorilla.onGround = false;
+                } else {
+                    gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height - gorilla.climbProgress;
+                }
+            } else if (gorilla.onGround) {
+                gorilla.x += gorillaSpeed * gorilla.direction;
+                
+                // Check if near a building to climb
+                for (let i = 0; i < buildings.length; i++) {
+                    if (buildings[i].destroyed) continue;
+                    
+                    const building = buildings[i];
+                    
+                    if (gorilla.x >= building.x - 5 && gorilla.x <= building.x + building.width) {
+                        if (Math.random() < 0.01 && !gorilla.climbing) {
+                            gorilla.climbing = true;
+                            gorilla.currentBuilding = i;
+                            gorilla.climbProgress = 0;
+                            gorilla.x = building.x + building.width / 2 - gorilla.width / 2;
+                            break;
+                        }
+                    }
+                }
+                
+                if (gorilla.x <= 10) gorilla.direction = 1;
+                if (gorilla.x >= CANVAS_WIDTH - gorilla.width - 10) gorilla.direction = -1;
+                
+                gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
+            } else {
+                // On top of building
+                gorilla.x += gorillaSpeed * gorilla.direction;
+                
+                const currentBuilding = buildings[gorilla.currentBuilding];
+                if (!currentBuilding || currentBuilding.destroyed) {
+                    gorilla.onGround = true;
+                    gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
+                    gorilla.currentBuilding = -1;
+                    return;
+                }
+                
+                const buildingLeft = currentBuilding.x;
+                const buildingRight = currentBuilding.x + currentBuilding.width - gorilla.width;
+                
+                if (gorilla.x <= buildingLeft || gorilla.x >= buildingRight) {
+                    gorilla.onGround = true;
+                    gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
+                    gorilla.currentBuilding = -1;
+                }
+            }
         }
         
         function drawBombs() {
