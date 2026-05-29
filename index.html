@@ -254,7 +254,7 @@
                     const building = buildings[i];
                     
                     if (gorilla.x >= building.x - 5 && gorilla.x <= building.x + building.width) {
-                        if (Math.random() < 0.01 && !gorilla.climbing) {
+                        if (Math.random() < 0.03 && !gorilla.climbing) {  // 3% chance to climb
                             gorilla.climbing = true;
                             gorilla.currentBuilding = i;
                             gorilla.climbProgress = 0;
