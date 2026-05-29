@@ -168,10 +168,14 @@
                 ctx.fillRect(b.x, b.y, b.width, b.height);
                 ctx.strokeStyle = '#222';
                 ctx.strokeRect(b.x, b.y, b.width, b.height);
+                // Only draw windows that are within current building height
                 b.windows.forEach(w => {
                     if (!w.lit) return;
-                    ctx.fillStyle = Math.random() > 0.3 ? '#ffff00' : '#ffaa00';
-                    ctx.fillRect(b.x + w.x, b.y + w.y, 4, 6);
+                    // Only draw window if it's within building bounds
+                    if (w.y < b.height - 10) {
+                        ctx.fillStyle = Math.random() > 0.3 ? '#ffff00' : '#ffaa00';
+                        ctx.fillRect(b.x + w.x, b.y + w.y, 4, 6);
+                    }
                 });
             });
         }
