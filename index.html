@@ -53,6 +53,7 @@
         #score span { color: #ffff00; }
         #lives span { color: #ff6666; }
         #level span { color: #00ffff; }
+        #bombStatus span { color: #00ffff; }
         
         #instructions {
             background: rgba(0, 0, 0, 0.7);
@@ -168,6 +169,9 @@
             background: #00cc00;
             transform: scale(1.05);
         }
+        
+        .ready { color: #00ff00 !important; }
+        .waiting { color: #ff6600 !important; }
     </style>
 </head>
 <body>
@@ -176,7 +180,7 @@
     <div id="ui">
         <div id="score">SCORE: <span id="scoreValue">0</span></div>
         <div id="level">LEVEL: <span id="levelValue">1</span></div>
-        <div id="lives">LIVES: <span id="livesValue">3</span></div>
+        <div id="bombStatus">BOMB: <span id="bombReady" class="ready">READY</span></div>
     </div>
     
     <div id="gameContainer">
@@ -193,6 +197,7 @@
             <p>🎉 All buildings destroyed!</p>
             <p>The plane landed safely!</p>
             <p>Bonus: +1000 points</p>
+            <p>Level: <span id="nextLevel">2</span></p>
             <button id="nextLevelBtn">Next Level</button>
         </div>
         <div id="nameEntry">
@@ -208,9 +213,10 @@
     <div id="instructions">
         <h3>HOW TO PLAY</h3>
         <p>🛩️ Plane flies LEFT to RIGHT, drops down each pass</p>
-        <p>🏢 Destroy ALL buildings before plane crashes into one!</p>
-        <p>💥 If plane hits a building = GAME OVER</p>
-        <p>🛬 If all buildings destroyed = plane lands safely = LEVEL UP</p>
+        <p>🏢 Destroy ALL buildings before plane hits one!</p>
+        <p>💥 If plane hits building = GAME OVER</p>
+        <p>🛬 When all buildings destroyed, plane lands safely</p>
+        <p>💣 Only ONE bomb at a time - wait for explosion!</p>
         <p>🦍 BONUS: Shoot the gorilla for +500 points!</p>
         <p><strong>CONTROLS: CLICK or SPACEBAR to drop bombs</p>
     </div>
@@ -234,15 +240,15 @@
         let level = 1;
         let baseSpeed = 2;
         let planeSpeed = baseSpeed;
-        let landing = false;
+        let landingPhase = false;
+        let bombReady = true;
         
         // Plane
         let plane = {
             x: -30,
             y: 50,
             width: 60,
-            height: 20,
-            speed: 2
+            height: 20
         };
         
         // Buildings
@@ -283,6 +289,7 @@
             resetGorilla();
             resetPlane();
             updateHighScoresDisplay();
+            updateBombStatus();
             gameLoop();
         }
         
@@ -290,10 +297,22 @@
         function resetPlane() {
             plane.x = -30;
             plane.y = 50;
-            landing = false;
+            landingPhase = false;
         }
         
-        // Generate Buildings (smaller, more of them)
+        // Update Bomb Status Display
+        function updateBombStatus() {
+            const statusEl = document.getElementById('bombReady');
+            if (bombReady) {
+                statusEl.textContent = 'READY';
+                statusEl.className = 'ready';
+            } else {
+                statusEl.textContent = 'WAIT';
+                statusEl.className = 'waiting';
+            }
+        }
+        
+        // Generate Buildings
         function generateBuildings() {
             buildings = [];
             let x = 0;
@@ -321,8 +340,6 @@
         // Generate Windows
         function generateWindows(buildingWidth, buildingHeight) {
             const windows = [];
-            const windowWidth = 6;
-            const windowHeight = 8;
             const spacing = 12;
             
             for (let y = 15; y < buildingHeight - 15; y += spacing) {
@@ -353,13 +370,11 @@
             ctx.save();
             ctx.translate(plane.x, plane.y);
             
-            // Plane body
             ctx.fillStyle = '#00aaff';
             ctx.beginPath();
             ctx.ellipse(0, 0, 25, 8, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Wings
             ctx.fillStyle = '#0088cc';
             ctx.beginPath();
             ctx.moveTo(-10, -3);
@@ -373,11 +388,22 @@
             ctx.lineTo(10, 3);
             ctx.fill();
             
-            // Cockpit
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.ellipse(15, 0, 6, 5, 0, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Landing gear when landing
+            if (landingPhase) {
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-10, 8);
+                ctx.lineTo(-10, 15);
+                ctx.moveTo(10, 8);
+                ctx.lineTo(10, 15);
+                ctx.stroke();
+            }
             
             ctx.restore();
         }
@@ -406,6 +432,16 @@
         function drawGround() {
             ctx.fillStyle = '#3a3a3a';
             ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
+            
+            // Runway for landing
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(350, CANVAS_HEIGHT - GROUND_HEIGHT, 100, GROUND_HEIGHT);
+            
+            // Runway markings
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect(360 + i * 18, CANVAS_HEIGHT - 12, 10, 4);
+            }
             
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
@@ -537,47 +573,72 @@
                 exp.frame++;
                 if (exp.frame > 15) {
                     explosions.splice(index, 1);
+                    bombReady = true;
+                    updateBombStatus();
                 }
             });
         }
         
-        // Update Plane (LEFT to RIGHT only, drop down each pass)
+        // Update Plane (LEFT to RIGHT, then landing phase)
         function updatePlane() {
-            plane.x += planeSpeed;
+            // Check if all buildings destroyed
+            const allDestroyed = buildings.every(b => b.destroyed);
             
-            // Check collision with buildings
-            for (let building of buildings) {
-                if (building.destroyed) continue;
-                
-                // Plane hit building?
-                if (plane.x + 25 > building.x && 
-                    plane.x - 25 < building.x + building.width &&
-                    plane.y + 12 > building.y &&
-                    plane.y - 12 < building.y + building.height) {
-                    endGame('crash');
-                    return;
-                }
+            if (allDestroyed && !landingPhase) {
+                landingPhase = true;
             }
             
-            // Plane went off screen to the right
-            if (plane.x > CANVAS_WIDTH + 50) {
-                // Check if all buildings destroyed
-                const allDestroyed = buildings.every(b => b.destroyed);
+            if (landingPhase) {
+                // Landing phase - circle around and land
+                plane.x += planeSpeed;
                 
-                if (allDestroyed) {
-                    // All buildings destroyed - plane lands!
-                    endGame('land');
+                // Descend towards runway
+                if (plane.y < CANVAS_HEIGHT - GROUND_HEIGHT - 25) {
+                    plane.y += 0.5;
+                }
+                
+                // Check if landed on runway
+                if (plane.x > 350 && plane.x < 450 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 25) {
+                    // Landed!
+                    gameState = 'landing';
+                    score += 1000;
+                    document.getElementById('landing').style.display = 'block';
+                    document.getElementById('nextLevel').textContent = level + 1;
                     return;
                 }
                 
-                // Drop down and fly again
-                plane.x = -30;
-                plane.y += 30;
+                // Went off screen, loop back
+                if (plane.x > CANVAS_WIDTH + 50) {
+                    plane.x = -30;
+                    plane.y = 50;
+                }
+            } else {
+                // Normal flight - left to right
+                plane.x += planeSpeed;
                 
-                // Check if plane hit ground
-                if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
-                    endGame('crash');
-                    return;
+                // Check collision with buildings
+                for (let building of buildings) {
+                    if (building.destroyed) continue;
+                    
+                    if (plane.x + 25 > building.x && 
+                        plane.x - 25 < building.x + building.width &&
+                        plane.y + 12 > building.y &&
+                        plane.y - 12 < building.y + building.height) {
+                        endGame('crash');
+                        return;
+                    }
+                }
+                
+                // Went off screen, loop back lower
+                if (plane.x > CANVAS_WIDTH + 50) {
+                    plane.x = -30;
+                    plane.y += 30;
+                    
+                    // Check if too low (hit ground)
+                    if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                        endGame('crash');
+                        return;
+                    }
                 }
             }
         }
@@ -597,6 +658,8 @@
                         
                         explosions.push({ x: bomb.x, y: bomb.y, frame: 0 });
                         bombs.splice(bombIndex, 1);
+                        bombReady = false;
+                        updateBombStatus();
                         
                         building.height -= 40;
                         building.y += 40;
@@ -620,6 +683,8 @@
                     
                     explosions.push({ x: bomb.x, y: bomb.y, frame: 0 });
                     bombs.splice(bombIndex, 1);
+                    bombReady = false;
+                    updateBombStatus();
                     
                     gorilla.alive = false;
                     score += 500;
@@ -628,6 +693,8 @@
                 
                 if (bomb.y > CANVAS_HEIGHT) {
                     bombs.splice(bombIndex, 1);
+                    bombReady = true;
+                    updateBombStatus();
                 }
             });
         }
@@ -635,20 +702,29 @@
         // Drop Bomb from plane
         function dropBombFromPlane() {
             if (gameState !== 'playing') return;
+            if (!bombReady) return;
+            if (bombs.length > 0) return;
+            
             bombs.push({
                 x: plane.x,
                 y: plane.y + 15
             });
+            bombReady = false;
+            updateBombStatus();
         }
         
         // Click to shoot
         canvas.addEventListener('click', (e) => {
             if (gameState !== 'playing') return;
+            if (!bombReady) return;
+            if (bombs.length > 0) return;
             
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             
             bombs.push({ x, y: plane.y + 30 });
+            bombReady = false;
+            updateBombStatus();
         });
         
         // Spacebar to drop
@@ -661,17 +737,10 @@
         
         // End Game
         function endGame(reason) {
-            if (reason === 'crash') {
-                gameState = 'gameOver';
-                document.getElementById('finalScore').textContent = score;
-                document.getElementById('finalLevel').textContent = level;
-                document.getElementById('gameOver').style.display = 'block';
-            } else if (reason === 'land') {
-                // Level complete!
-                gameState = 'landing';
-                score += 1000;
-                document.getElementById('landing').style.display = 'block';
-            }
+            gameState = 'gameOver';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('gameOver').style.display = 'block';
         }
         
         // Next Level
@@ -681,6 +750,8 @@
             
             bombs = [];
             explosions = [];
+            bombReady = true;
+            updateBombStatus();
             
             generateBuildings();
             resetGorilla();
@@ -754,6 +825,8 @@
             planeSpeed = baseSpeed;
             bombs = [];
             explosions = [];
+            bombReady = true;
+            updateBombStatus();
             
             generateBuildings();
             resetGorilla();
