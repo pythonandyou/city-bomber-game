@@ -68,7 +68,7 @@
         let plane = { x: -30, y: 50 };
         let landingPattern = { active: false, phase: 0 };
         let buildings = [];
-        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.21, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
+        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.24, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
         let bombs = [];
         let explosions = [];
         let highScores = JSON.parse(localStorage.getItem('cityBomberHS')) || [];
@@ -314,13 +314,12 @@
                         updateBombStatus();
                         
                         b.height -= 40;
-                        // Keep building above ground - never sink into runway
-                        const minHeight = CANVAS_HEIGHT - GROUND_HEIGHT - b.height;
+                        // Recalculate building position to keep it above ground
+                        b.y = CANVAS_HEIGHT - GROUND_HEIGHT - b.height;
                         if (b.height <= 30) {
                             b.destroyed = true;
                             score += 100;
                         } else {
-                            b.y = minHeight;
                             score += 10;
                         }
                         document.getElementById('scoreValue').textContent = score;
