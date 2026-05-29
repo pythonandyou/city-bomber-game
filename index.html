@@ -433,14 +433,14 @@
             ctx.fillStyle = '#3a3a3a';
             ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
             
-            // Runway for landing
+            // Runway for landing (full width)
             ctx.fillStyle = '#4a4a4a';
-            ctx.fillRect(350, CANVAS_HEIGHT - GROUND_HEIGHT, 100, GROUND_HEIGHT);
+            ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
             
             // Runway markings
             ctx.fillStyle = '#fff';
-            for (let i = 0; i < 5; i++) {
-                ctx.fillRect(360 + i * 18, CANVAS_HEIGHT - 12, 10, 4);
+            for (let i = 0; i < 20; i++) {
+                ctx.fillRect(20 + i * 40, CANVAS_HEIGHT - 12, 20, 4);
             }
             
             ctx.strokeStyle = '#00ff00';
@@ -491,7 +491,7 @@
         function updateGorilla() {
             if (!gorilla.alive) return;
             
-            const gorillaSpeed = 1 + (level * 0.1);
+            const gorillaSpeed = 0.5 + (level * 0.05); // Slower base speed and smaller increment
             
             if (gorilla.climbing) {
                 gorilla.climbProgress += 2;
@@ -615,10 +615,10 @@
                         break;
                     case 2: // Flying left towards runway
                         plane.x -= planeSpeed;
-                        plane.y += 0.5;
+                        plane.y += 0.3;
                         
-                        // Check if on runway
-                        if (plane.x < 450 && plane.x > 350 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                        // Check if landed (anywhere on full-width runway)
+                        if (plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
                             // Landed!
                             gameState = 'landing';
                             score += 1000;
@@ -635,10 +635,10 @@
                         break;
                     case 3: // Final approach from left
                         plane.x += planeSpeed;
-                        plane.y += 0.5;
+                        plane.y += 0.3;
                         
-                        // Check if on runway
-                        if (plane.x > 350 && plane.x < 450 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                        // Check if landed (anywhere on full-width runway)
+                        if (plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
                             gameState = 'landing';
                             score += 1000;
                             document.getElementById('landing').style.display = 'block';
@@ -665,10 +665,10 @@
                     }
                 }
                 
-                // Went off screen, loop back lower
+                // Went off screen, loop back lower (slower descent)
                 if (plane.x > CANVAS_WIDTH + 50) {
                     plane.x = -30;
-                    plane.y += 30;
+                    plane.y += 20; // Reduced from 30 to 20
                     
                     // Check if too low (hit ground)
                     if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
