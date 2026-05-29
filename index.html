@@ -68,7 +68,7 @@
         let plane = { x: -30, y: 50 };
         let landingPattern = { active: false, phase: 0 };
         let buildings = [];
-        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.29, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
+        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.38, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
         let bombs = [];
         let explosions = [];
         let highScores = JSON.parse(localStorage.getItem('cityBomberHS')) || [];
@@ -252,25 +252,18 @@
         function updatePlane() {
             const allDestroyed = buildings.every(b => b.destroyed);
             
-            if (allDestroyed && !landingPattern.active) {
+            // If all buildings destroyed, start landing
+            if (allDestroyed) {
                 landingPattern.active = true;
-                landingPattern.phase = 0;
-                plane.y = 50; // Reset to top for landing approach
-                plane.x = -30;
-                return;
             }
             
             if (landingPattern.active) {
-                // Landing: fly right and descend
+                // Landing: just descend until we hit the ground
                 plane.x += planeSpeed;
+                plane.y += 1; // Descend constantly
                 
-                // Gradually descend
-                if (plane.y < CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
-                    plane.y += 0.5;
-                }
-                
-                // Check if plane has landed (touched ground level)
-                if (plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                // Check if plane has landed (touched ground)
+                if (plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 20) {
                     gameState = 'landing';
                     score += 1000;
                     document.getElementById('landing').style.display = 'block';
@@ -279,10 +272,9 @@
                     return;
                 }
                 
-                // Wrap around if needed
+                // Wrap around
                 if (plane.x > CANVAS_WIDTH + 50) {
                     plane.x = -30;
-                    plane.y += 20; // Drop more each wrap
                 }
             } else {
                 plane.x += planeSpeed;
