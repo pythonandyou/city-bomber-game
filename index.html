@@ -99,7 +99,7 @@
         #highScoresList li:nth-child(2) { color: #c0c0c0; }
         #highScoresList li:nth-child(3) { color: #cd7f32; }
         
-        #gameOver, #levelComplete, #nameEntry {
+        #gameOver, #nameEntry, #landing {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -116,12 +116,12 @@
             border: 2px solid #ff0000;
         }
         
-        #levelComplete {
-            border: 2px solid #00ff00;
-        }
-        
         #nameEntry {
             border: 2px solid #ffff00;
+        }
+        
+        #landing {
+            border: 2px solid #00ff00;
         }
         
         #gameOver h2 {
@@ -130,7 +130,7 @@
             margin-bottom: 15px;
         }
         
-        #levelComplete h2 {
+        #landing h2 {
             color: #00ff00;
             font-size: 2em;
             margin-bottom: 15px;
@@ -182,17 +182,18 @@
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="gameOver">
-            <h2>GAME OVER!</h2>
+            <h2>💥 GAME OVER!</h2>
+            <p>Plane crashed into a building!</p>
             <p>Final Score: <span id="finalScore">0</span></p>
             <p>Level Reached: <span id="finalLevel">1</span></p>
             <button id="restartBtn">Play Again</button>
         </div>
-        <div id="levelComplete">
-            <h2>✅ LEVEL COMPLETE!</h2>
-            <p>All buildings destroyed!</p>
+        <div id="landing">
+            <h2>🛬 LEVEL COMPLETE!</h2>
+            <p>🎉 All buildings destroyed!</p>
+            <p>The plane landed safely!</p>
             <p>Bonus: +1000 points</p>
-            <p>Next level: 5% faster</p>
-            <button id="nextLevelBtn">Continue</button>
+            <button id="nextLevelBtn">Next Level</button>
         </div>
         <div id="nameEntry">
             <h2>🏆 NEW HIGH SCORE! 🏆</h2>
@@ -206,11 +207,12 @@
     
     <div id="instructions">
         <h3>HOW TO PLAY</h3>
-        <p>🛩️ Plane flies left-right, drops down each pass - destroy all buildings before it crashes!</p>
-        <p>🏢 Buildings get destroyed when shot - clear them all to advance!</p>
-        <p>🦍 BONUS: Shoot the gorilla walking on the ground for +500 points!</p>
-        <p><strong>CONTROLS: CLICK to shoot bombs | SPACEBAR to drop bombs from plane</p>
-        <p>Each level gets 5% faster!</p>
+        <p>🛩️ Plane flies LEFT to RIGHT, drops down each pass</p>
+        <p>🏢 Destroy ALL buildings before plane crashes into one!</p>
+        <p>💥 If plane hits a building = GAME OVER</p>
+        <p>🛬 If all buildings destroyed = plane lands safely = LEVEL UP</p>
+        <p>🦍 BONUS: Shoot the gorilla for +500 points!</p>
+        <p><strong>CONTROLS: CLICK or SPACEBAR to drop bombs</p>
     </div>
     
     <div id="highScores">
@@ -232,15 +234,15 @@
         let level = 1;
         let baseSpeed = 2;
         let planeSpeed = baseSpeed;
+        let landing = false;
         
         // Plane
         let plane = {
-            x: 0,
+            x: -30,
             y: 50,
             width: 60,
             height: 20,
-            direction: 1,
-            dropAmount: 30
+            speed: 2
         };
         
         // Buildings
@@ -279,15 +281,23 @@
         function init() {
             generateBuildings();
             resetGorilla();
+            resetPlane();
             updateHighScoresDisplay();
             gameLoop();
+        }
+        
+        // Reset Plane
+        function resetPlane() {
+            plane.x = -30;
+            plane.y = 50;
+            landing = false;
         }
         
         // Generate Buildings (smaller, more of them)
         function generateBuildings() {
             buildings = [];
             let x = 0;
-            const numBuildings = 15 + Math.floor(Math.random() * 5); // 15-19 buildings
+            const numBuildings = 15 + Math.floor(Math.random() * 5);
             
             for (let i = 0; i < numBuildings; i++) {
                 const width = BUILDING_MIN_WIDTH + Math.random() * (BUILDING_MAX_WIDTH - BUILDING_MIN_WIDTH);
@@ -304,7 +314,7 @@
                     originalHeight: height
                 });
                 
-                x += width + 2; // Small gap between buildings
+                x += width + 2;
             }
         }
         
@@ -343,10 +353,6 @@
             ctx.save();
             ctx.translate(plane.x, plane.y);
             
-            if (plane.direction < 0) {
-                ctx.scale(-1, 1);
-            }
-            
             // Plane body
             ctx.fillStyle = '#00aaff';
             ctx.beginPath();
@@ -381,16 +387,13 @@
             buildings.forEach(building => {
                 if (building.destroyed) return;
                 
-                // Building body
                 ctx.fillStyle = building.color;
                 ctx.fillRect(building.x, building.y, building.width, building.height);
                 
-                // Building outline
                 ctx.strokeStyle = '#222';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(building.x, building.y, building.width, building.height);
                 
-                // Windows
                 building.windows.forEach(window => {
                     if (!window.lit) return;
                     ctx.fillStyle = Math.random() > 0.3 ? '#ffff00' : '#ffaa00';
@@ -404,7 +407,6 @@
             ctx.fillStyle = '#3a3a3a';
             ctx.fillRect(0, CANVAS_HEIGHT - GROUND_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT);
             
-            // Ground line
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -413,31 +415,27 @@
             ctx.stroke();
         }
         
-        // Draw Gorilla (walking on ground, climbing buildings)
+        // Draw Gorilla
         function drawGorilla() {
             if (!gorilla.alive) return;
             
             ctx.save();
             ctx.translate(gorilla.x, gorilla.y);
             
-            // Body
             ctx.fillStyle = '#4a3728';
             ctx.fillRect(5, 10, 20, 30);
             
-            // Head
             ctx.fillStyle = '#5a4738';
             ctx.beginPath();
             ctx.arc(15, 8, 10, 0, Math.PI * 2);
             ctx.fill();
             
-            // Eyes
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
             ctx.arc(12, 6, 2, 0, Math.PI * 2);
             ctx.arc(18, 6, 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Arms
             ctx.fillStyle = '#4a3728';
             if (gorilla.climbing) {
                 ctx.fillRect(0, 15, 5, 20);
@@ -447,25 +445,22 @@
                 ctx.fillRect(27, 15, 5, 15);
             }
             
-            // Legs
             ctx.fillRect(8, 38, 6, 8);
             ctx.fillRect(16, 38, 6, 8);
             
             ctx.restore();
         }
         
-        // Update Gorilla (walk on ground, climb buildings)
+        // Update Gorilla
         function updateGorilla() {
             if (!gorilla.alive) return;
             
             const gorillaSpeed = 1 + (level * 0.1);
             
             if (gorilla.climbing) {
-                // Climbing up building
                 gorilla.climbProgress += 2;
                 
                 if (gorilla.climbProgress >= buildings[gorilla.currentBuilding].height) {
-                    // Reached top
                     gorilla.y = buildings[gorilla.currentBuilding].y - gorilla.height;
                     gorilla.climbing = false;
                     gorilla.onGround = false;
@@ -473,20 +468,14 @@
                     gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height - gorilla.climbProgress;
                 }
             } else if (gorilla.onGround) {
-                // Walking on ground
                 gorilla.x += gorillaSpeed * gorilla.direction;
                 
-                // Check if near a building
                 for (let i = 0; i < buildings.length; i++) {
                     if (buildings[i].destroyed) continue;
                     
                     const building = buildings[i];
-                    const buildingLeft = building.x;
-                    const buildingRight = building.x + building.width;
                     
-                    // If gorilla is at building edge
-                    if (gorilla.x >= buildingLeft - 5 && gorilla.x <= buildingRight) {
-                        // Random chance to start climbing
+                    if (gorilla.x >= building.x - 5 && gorilla.x <= building.x + building.width) {
                         if (Math.random() < 0.01 && !gorilla.climbing) {
                             gorilla.climbing = true;
                             gorilla.currentBuilding = i;
@@ -497,7 +486,6 @@
                     }
                 }
                 
-                // Reverse at edges
                 if (gorilla.x <= 10) {
                     gorilla.direction = 1;
                 } else if (gorilla.x >= CANVAS_WIDTH - gorilla.width - 10) {
@@ -506,24 +494,20 @@
                 
                 gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
             } else {
-                // On top of building
                 gorilla.x += gorillaSpeed * gorilla.direction;
                 
                 const currentBuilding = buildings[gorilla.currentBuilding];
                 if (!currentBuilding || currentBuilding.destroyed) {
-                    // Building destroyed, fall to ground
                     gorilla.onGround = true;
                     gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
                     gorilla.currentBuilding = -1;
                     return;
                 }
                 
-                // Walk on building top
                 const buildingLeft = currentBuilding.x;
                 const buildingRight = currentBuilding.x + currentBuilding.width - gorilla.width;
                 
                 if (gorilla.x <= buildingLeft || gorilla.x >= buildingRight) {
-                    // Jump down from building
                     gorilla.onGround = true;
                     gorilla.y = CANVAS_HEIGHT - GROUND_HEIGHT - gorilla.height;
                     gorilla.currentBuilding = -1;
@@ -557,21 +541,44 @@
             });
         }
         
-        // Update Plane
+        // Update Plane (LEFT to RIGHT only, drop down each pass)
         function updatePlane() {
-            plane.x += planeSpeed * plane.direction;
+            plane.x += planeSpeed;
             
-            if (plane.x > CANVAS_WIDTH + 30) {
-                plane.direction = -1;
-                plane.y += plane.dropAmount;
-            } else if (plane.x < -30) {
-                plane.direction = 1;
-                plane.y += plane.dropAmount;
+            // Check collision with buildings
+            for (let building of buildings) {
+                if (building.destroyed) continue;
+                
+                // Plane hit building?
+                if (plane.x + 25 > building.x && 
+                    plane.x - 25 < building.x + building.width &&
+                    plane.y + 12 > building.y &&
+                    plane.y - 12 < building.y + building.height) {
+                    endGame('crash');
+                    return;
+                }
             }
             
-            // Check if plane hit ground
-            if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 20) {
-                endGame();
+            // Plane went off screen to the right
+            if (plane.x > CANVAS_WIDTH + 50) {
+                // Check if all buildings destroyed
+                const allDestroyed = buildings.every(b => b.destroyed);
+                
+                if (allDestroyed) {
+                    // All buildings destroyed - plane lands!
+                    endGame('land');
+                    return;
+                }
+                
+                // Drop down and fly again
+                plane.x = -30;
+                plane.y += 30;
+                
+                // Check if plane hit ground
+                if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                    endGame('crash');
+                    return;
+                }
             }
         }
         
@@ -580,7 +587,6 @@
             bombs.forEach((bomb, bombIndex) => {
                 bomb.y += BOMB_SPEED;
                 
-                // Check collision with buildings
                 buildings.forEach(building => {
                     if (building.destroyed) return;
                     
@@ -606,7 +612,6 @@
                     }
                 });
                 
-                // Check collision with gorilla
                 if (gorilla.alive &&
                     bomb.x > gorilla.x && 
                     bomb.x < gorilla.x + gorilla.width &&
@@ -621,7 +626,6 @@
                     updateScore();
                 }
                 
-                // Remove if off screen
                 if (bomb.y > CANVAS_HEIGHT) {
                     bombs.splice(bombIndex, 1);
                 }
@@ -643,7 +647,6 @@
             
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
             
             bombs.push({ x, y: plane.y + 30 });
         });
@@ -656,47 +659,42 @@
             }
         });
         
-        // Check Win Condition
-        function checkWin() {
-            const allDestroyed = buildings.every(b => b.destroyed);
-            if (allDestroyed) {
-                gameState = 'levelComplete';
-                document.getElementById('levelComplete').style.display = 'block';
+        // End Game
+        function endGame(reason) {
+            if (reason === 'crash') {
+                gameState = 'gameOver';
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('finalLevel').textContent = level;
+                document.getElementById('gameOver').style.display = 'block';
+            } else if (reason === 'land') {
+                // Level complete!
+                gameState = 'landing';
+                score += 1000;
+                document.getElementById('landing').style.display = 'block';
             }
         }
         
         // Next Level
         document.getElementById('nextLevelBtn').addEventListener('click', () => {
-            score += 1000; // Level bonus
             level++;
-            planeSpeed = baseSpeed + (level - 1) * 0.1; // 5% faster per level
+            planeSpeed = baseSpeed + (level - 1) * 0.1;
             
-            plane.y = 50;
-            plane.x = 0;
-            plane.direction = 1;
             bombs = [];
             explosions = [];
             
             generateBuildings();
             resetGorilla();
+            resetPlane();
             
             updateScore();
             document.getElementById('levelValue').textContent = level;
-            document.getElementById('levelComplete').style.display = 'none';
+            document.getElementById('landing').style.display = 'none';
             gameState = 'playing';
         });
         
         // Update Score Display
         function updateScore() {
             document.getElementById('scoreValue').textContent = score;
-        }
-        
-        // End Game
-        function endGame() {
-            gameState = 'gameOver';
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('finalLevel').textContent = level;
-            document.getElementById('gameOver').style.display = 'block';
         }
         
         // Restart Game
@@ -754,14 +752,12 @@
             score = 0;
             level = 1;
             planeSpeed = baseSpeed;
-            plane.y = 50;
-            plane.x = 0;
-            plane.direction = 1;
             bombs = [];
             explosions = [];
             
             generateBuildings();
             resetGorilla();
+            resetPlane();
             
             updateScore();
             document.getElementById('levelValue').textContent = level;
@@ -782,7 +778,6 @@
         
         // Main Game Loop
         function gameLoop() {
-            // Clear canvas
             ctx.fillStyle = '#0a0a2e';
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
@@ -792,7 +787,6 @@
                 updatePlane();
                 updateGorilla();
                 updateBombs();
-                checkWin();
             }
             
             drawGround();
