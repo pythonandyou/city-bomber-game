@@ -240,7 +240,6 @@
         let level = 1;
         let baseSpeed = 2;
         let planeSpeed = baseSpeed;
-        let landingPhase = false;
         let bombReady = true;
         
         // Plane
@@ -297,7 +296,8 @@
         function resetPlane() {
             plane.x = -30;
             plane.y = 50;
-            landingPhase = false;
+            landingPattern.active = false;
+            landingPattern.phase = 0;
         }
         
         // Update Bomb Status Display
@@ -394,7 +394,7 @@
             ctx.fill();
             
             // Landing gear when landing
-            if (landingPhase) {
+            if (landingPattern.active) {
                 ctx.strokeStyle = '#666';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -579,38 +579,74 @@
             });
         }
         
-        // Update Plane (LEFT to RIGHT, then landing phase)
+        // Landing pattern variables
+        let landingPattern = {
+            active: false,
+            phase: 0, // 0: fly right, 1: turn down, 2: fly left, 3: final approach
+            targetX: 400,
+            targetY: CANVAS_HEIGHT - GROUND_HEIGHT - 25
+        };
+        
+        // Update Plane (LEFT to RIGHT, then landing pattern)
         function updatePlane() {
             // Check if all buildings destroyed
             const allDestroyed = buildings.every(b => b.destroyed);
             
-            if (allDestroyed && !landingPhase) {
-                landingPhase = true;
+            if (allDestroyed && !landingPattern.active) {
+                landingPattern.active = true;
+                landingPattern.phase = 0;
             }
             
-            if (landingPhase) {
-                // Landing phase - circle around and land
-                plane.x += planeSpeed;
-                
-                // Descend towards runway
-                if (plane.y < CANVAS_HEIGHT - GROUND_HEIGHT - 25) {
-                    plane.y += 0.5;
-                }
-                
-                // Check if landed on runway
-                if (plane.x > 350 && plane.x < 450 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 25) {
-                    // Landed!
-                    gameState = 'landing';
-                    score += 1000;
-                    document.getElementById('landing').style.display = 'block';
-                    document.getElementById('nextLevel').textContent = level + 1;
-                    return;
-                }
-                
-                // Went off screen, loop back
-                if (plane.x > CANVAS_WIDTH + 50) {
-                    plane.x = -30;
-                    plane.y = 50;
+            if (landingPattern.active) {
+                // Landing pattern - fly one more pass then land
+                switch (landingPattern.phase) {
+                    case 0: // Flying right
+                        plane.x += planeSpeed;
+                        if (plane.x > CANVAS_WIDTH - 100) {
+                            landingPattern.phase = 1;
+                        }
+                        break;
+                    case 1: // Descending on right side
+                        plane.x += planeSpeed * 0.5;
+                        plane.y += 2;
+                        if (plane.y > CANVAS_HEIGHT - 100) {
+                            landingPattern.phase = 2;
+                        }
+                        break;
+                    case 2: // Flying left towards runway
+                        plane.x -= planeSpeed;
+                        plane.y += 0.5;
+                        
+                        // Check if on runway
+                        if (plane.x < 450 && plane.x > 350 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                            // Landed!
+                            gameState = 'landing';
+                            score += 1000;
+                            document.getElementById('landing').style.display = 'block';
+                            document.getElementById('nextLevel').textContent = level + 1;
+                            landingPattern.active = false;
+                            return;
+                        }
+                        
+                        // Went too far left, loop around
+                        if (plane.x < -30) {
+                            landingPattern.phase = 3;
+                        }
+                        break;
+                    case 3: // Final approach from left
+                        plane.x += planeSpeed;
+                        plane.y += 0.5;
+                        
+                        // Check if on runway
+                        if (plane.x > 350 && plane.x < 450 && plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
+                            gameState = 'landing';
+                            score += 1000;
+                            document.getElementById('landing').style.display = 'block';
+                            document.getElementById('nextLevel').textContent = level + 1;
+                            landingPattern.active = false;
+                            return;
+                        }
+                        break;
                 }
             } else {
                 // Normal flight - left to right
