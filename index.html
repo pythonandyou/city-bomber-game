@@ -68,7 +68,7 @@
         let plane = { x: -30, y: 50 };
         let landingPattern = { active: false, phase: 0 };
         let buildings = [];
-        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.38, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
+        let gorilla = { x: 100, y: 0, width: 30, height: 40, speed: 0.57, direction: 1, alive: true, climbing: false, climbProgress: 0, currentBuilding: -1, onGround: true };
         let bombs = [];
         let explosions = [];
         let highScores = JSON.parse(localStorage.getItem('cityBomberHS')) || [];
@@ -124,6 +124,13 @@
             gorilla.alive = true;
             gorilla.direction = 1;
             gorilla.currentBuilding = -1;
+        }
+        
+        function resetPlane() {
+            plane.x = -30;
+            plane.y = 50;
+            landingPattern.active = false;
+            landingPattern.phase = 0;
         }
         
         function updateBombStatus() {
@@ -373,6 +380,7 @@
             bombs = [];
             explosions = [];
             bombReady = true;
+            landingPattern.active = false; // Reset landing pattern
             updateBombStatus();
             generateBuildings();
             resetGorilla();
@@ -426,6 +434,8 @@
             bombs = [];
             explosions = [];
             bombReady = true;
+            landingPattern.active = false;
+            landingPattern.phase = 0;
             updateBombStatus();
             generateBuildings();
             resetGorilla();
