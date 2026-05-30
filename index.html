@@ -83,6 +83,94 @@
     <div id="highScores"><h3>🏆 TOP 10 SCORES 🏆</h3><ol id="highScoresList"></ol></div>
 
     <script>
+        // Audio System
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+        }
+        
+        function playSound(type) {
+            if (!audioCtx) return;
+            
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            switch(type) {
+                case 'bomb':
+                    // Explosion sound
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.3);
+                    break;
+                    
+                case 'gorilla':
+                    // High pitch hit sound
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.2);
+                    break;
+                    
+                case 'gameover':
+                    // Dramatic descending tone
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.5);
+                    break;
+                    
+                case 'levelup':
+                    // Rising triumphant sound
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.2);
+                    oscillator.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.4);
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.4);
+                    break;
+                    
+                case 'countdown':
+                    // "Tin tin" beep sound
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                    break;
+            }
+        }
+        
+        function playCountdown(callback) {
+            let count = 3;
+            const interval = setInterval(() => {
+                playSound('countdown');
+                count--;
+                if (count === 0) {
+                    clearInterval(interval);
+                    setTimeout(callback, 300);
+                }
+            }, 500);
+        }
+        
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const CANVAS_WIDTH = 800;
@@ -394,6 +482,7 @@
             // If all buildings destroyed but gorillas still alive - game over!
             if (allDestroyed && !allGorillasDead && !landingPattern.active) {
                 gameState = 'gameOver';
+                playSound('gameover');
                 document.getElementById('gameOverReason').textContent = 'Gorillas not eliminated before last building destroyed!';
                 document.getElementById('finalScore').textContent = score;
                 document.getElementById('finalLevel').textContent = level;
@@ -407,6 +496,7 @@
                 
                 if (plane.y >= CANVAS_HEIGHT - GROUND_HEIGHT - 20) {
                     gameState = 'landing';
+                    playSound('levelup');
                     score += 1000;
                     document.getElementById('landing').style.display = 'block';
                     document.getElementById('nextLevel').textContent = level + 1;
@@ -433,6 +523,7 @@
                     if (plane.x + 25 > b.x && plane.x - 25 < b.x + b.width &&
                         plane.y + 12 > b.y && plane.y - 12 < b.y + b.height) {
                         gameState = 'gameOver';
+                        playSound('gameover');
                         document.getElementById('gameOverReason').textContent = 'Spacecraft crashed into a building!';
                         document.getElementById('finalScore').textContent = score;
                         document.getElementById('finalLevel').textContent = level;
@@ -446,6 +537,7 @@
                     plane.y += 15;
                     if (plane.y > CANVAS_HEIGHT - GROUND_HEIGHT - 30) {
                         gameState = 'gameOver';
+                        playSound('gameover');
                         document.getElementById('gameOverReason').textContent = 'Spacecraft crashed!';
                         document.getElementById('finalScore').textContent = score;
                         document.getElementById('finalLevel').textContent = level;
@@ -469,6 +561,7 @@
                         bombReady = false;
                         updateBombStatus();
                         hitSomething = true;
+                        playSound('bomb'); // Bomb explosion sound
                         
                         b.height -= 40;
                         b.y = CANVAS_HEIGHT - GROUND_HEIGHT - b.height;
@@ -491,6 +584,7 @@
                         bombReady = false;
                         updateBombStatus();
                         hitSomething = true;
+                        playSound('gorilla'); // Gorilla hit sound
                         g.alive = false;
                         score += 500;
                         document.getElementById('scoreValue').textContent = score;
@@ -511,6 +605,7 @@
         
         canvas.addEventListener('click', e => {
             if (gameState !== 'playing' || !bombReady || bombs.length > 0) return;
+            initAudio(); // Initialize audio on first click
             bombs.push({ x: plane.x, y: plane.y + 15 });
             bombReady = false;
             updateBombStatus();
@@ -519,6 +614,7 @@
         document.addEventListener('keydown', e => {
             if (e.code === 'Space') {
                 if (gameState !== 'playing' || !bombReady || bombs.length > 0) return;
+                initAudio();
                 bombs.push({ x: plane.x, y: plane.y + 15 });
                 bombReady = false;
                 updateBombStatus();
@@ -527,18 +623,33 @@
         });
         
         document.getElementById('nextLevelBtn').addEventListener('click', () => {
-            level++;
-            bombs = [];
-            explosions = [];
-            bombReady = true;
-            landingPattern.active = false;
-            updateBombStatus();
-            generateBuildings();
-            resetGorillas();
-            resetPlane();
-            document.getElementById('levelValue').textContent = level;
             document.getElementById('landing').style.display = 'none';
-            gameState = 'playing';
+            document.getElementById('gameContainer').innerHTML += '<div id="countdown" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4em;color:#00ff00;text-shadow:0 0 20px #00ff00;z-index:200;">3</div>';
+            
+            let count = 3;
+            const countdownEl = document.getElementById('countdown');
+            const countdownInterval = setInterval(() => {
+                playSound('countdown');
+                count--;
+                if (count > 0) {
+                    countdownEl.textContent = count;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownEl.remove();
+                    
+                    level++;
+                    bombs = [];
+                    explosions = [];
+                    bombReady = true;
+                    landingPattern.active = false;
+                    updateBombStatus();
+                    generateBuildings();
+                    resetGorillas();
+                    resetPlane();
+                    document.getElementById('levelValue').textContent = level;
+                    gameState = 'playing';
+                }
+            }, 500);
         });
         
         document.getElementById('restartBtn').addEventListener('click', () => {
