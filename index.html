@@ -122,7 +122,10 @@
         
         function getGorillaCount() {
             // 1 gorilla + 1 extra every 5 levels
-            return 1 + Math.floor((level - 1) / 5);
+            // Level 1-4: 1 gorilla
+            // Level 5-9: 2 gorillas
+            // Level 10-14: 3 gorillas
+            return 1 + Math.floor(level / 5);
         }
         
         function resetGorillas() {
