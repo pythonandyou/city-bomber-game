@@ -227,30 +227,66 @@
             updateHighScoresDisplay();
             updateBombStatus();
             updateGorillaCount();
+            
+            // Show start screen
+            const startScreen = document.createElement('div');
+            startScreen.id = 'startScreen';
+            startScreen.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#00ff00;z-index:200;';
+            startScreen.innerHTML = `
+                <h1 style="font-size:2.5em;text-shadow:0 0 20px #00ff00;margin-bottom:20px;">🎮 CITY BOMBER 🎮</h1>
+                <p style="font-size:1.5em;margin-bottom:30px;">Press SPACE or CLICK to Start</p>
+                <div style="font-size:0.9em;color:#888;">
+                    <p>🛸 Spacecraft flies left to right</p>
+                    <p>🏢 Destroy all buildings</p>
+                    <p>🦍 Kill all gorillas first!</p>
+                    <p>💣 Miss = buildings grow taller</p>
+                </div>
+            `;
+            document.getElementById('gameContainer').appendChild(startScreen);
+            
+            // Initialize audio on first interaction
+            const startHandler = () => {
+                initAudio();
+                startScreen.remove();
+                canvas.removeEventListener('click', startHandler);
+                document.removeEventListener('keydown', keyHandler);
+                showCountdown();
+            };
+            
+            const keyHandler = (e) => {
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    startHandler();
+                }
+            };
+            
+            canvas.addEventListener('click', startHandler);
+            document.addEventListener('keydown', keyHandler);
+            
             gameLoop();
         }
         
-        // Wait for page load, then show start countdown
-        window.addEventListener('load', () => {
-            gameState = 'waiting';
+        function showCountdown() {
+            gameState = 'countdown';
             
-            // Create countdown element
             const countdownEl = document.createElement('div');
-            countdownEl.id = 'startCountdown';
-            countdownEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4em;color:#00ff00;text-shadow:0 0 20px #00ff00;z-index:200;';
+            countdownEl.id = 'countdown';
+            countdownEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5em;color:#00ff00;text-shadow:0 0 30px #00ff00;z-index:200;';
             countdownEl.textContent = '3';
             document.getElementById('gameContainer').appendChild(countdownEl);
             
-            initAudio();
             let count = 3;
+            playSound('countdown');
+            
             const countdownInterval = setInterval(() => {
-                playSound('countdown');
                 count--;
                 if (count > 0) {
+                    playSound('countdown');
                     countdownEl.textContent = count;
                 } else {
                     clearInterval(countdownInterval);
                     countdownEl.textContent = 'GO!';
+                    playSound('levelup');
                     
                     setTimeout(() => {
                         countdownEl.remove();
@@ -258,7 +294,12 @@
                         gameStarted = true;
                     }, 500);
                 }
-            }, 1000); // 1 second between counts
+            }, 1000);
+        }
+        
+        // Wait for page load
+        window.addEventListener('load', () => {
+            gameState = 'waiting';
         });
         
         function resetPlane() {
@@ -658,6 +699,7 @@
                     updateBombStatus();
                     // Grow all buildings
                     growBuildings();
+                    playSound('countdown'); // Sound when buildings grow
                 }
             });
         }
@@ -682,25 +724,27 @@
         });
         
         document.getElementById('nextLevelBtn').addEventListener('click', () => {
+            initAudio();
+            playSound('countdown');
             document.getElementById('landing').style.display = 'none';
             
             // Create countdown element
             const countdownEl = document.createElement('div');
             countdownEl.id = 'countdown';
-            countdownEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4em;color:#00ff00;text-shadow:0 0 20px #00ff00;z-index:200;';
+            countdownEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5em;color:#00ff00;text-shadow:0 0 30px #00ff00;z-index:200;';
             countdownEl.textContent = '3';
             document.getElementById('gameContainer').appendChild(countdownEl);
             
-            initAudio();
             let count = 3;
             const countdownInterval = setInterval(() => {
-                playSound('countdown');
                 count--;
                 if (count > 0) {
+                    playSound('countdown');
                     countdownEl.textContent = count;
                 } else {
                     clearInterval(countdownInterval);
                     countdownEl.textContent = 'GO!';
+                    playSound('levelup');
                     
                     setTimeout(() => {
                         countdownEl.remove();
@@ -715,9 +759,9 @@
                         resetPlane();
                         document.getElementById('levelValue').textContent = level;
                         gameState = 'playing';
-                    }, 300);
+                    }, 500);
                 }
-            }, 700); // Slower countdown (700ms)
+            }, 1000);
         });
         
         document.getElementById('restartBtn').addEventListener('click', () => {
