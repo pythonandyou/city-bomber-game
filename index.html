@@ -177,7 +177,8 @@
         const CANVAS_HEIGHT = 500;
         const GROUND_HEIGHT = 20;
         
-        let gameState = 'playing';
+        let gameState = 'waiting'; // 'waiting', 'countdown', 'playing', 'gameOver', 'landing'
+        let gameStarted = false;
         let score = 0;
         let level = 1;
         let planeSpeed = 2;
@@ -226,35 +227,39 @@
             updateHighScoresDisplay();
             updateBombStatus();
             updateGorillaCount();
-            
-            // Show start message
-            const startMsg = document.createElement('div');
-            startMsg.id = 'startMsg';
-            startMsg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2em;color:#00ff00;text-shadow:0 0 10px #00ff00;z-index:200;text-align:center;';
-            startMsg.innerHTML = '🎮 CITY BOMBER 🎮<br><br>Click to Start<br><span style="font-size:0.5em">Space or Click to drop bombs</span>';
-            document.getElementById('gameContainer').appendChild(startMsg);
-            
-            // Wait for click to start
-            const startHandler = () => {
-                startMsg.remove();
-                canvas.removeEventListener('click', startHandler);
-                document.removeEventListener('keydown', startKeyHandler);
-                startCountdown(() => {
-                    gameState = 'playing';
-                });
-            };
-            
-            const startKeyHandler = (e) => {
-                if (e.code === 'Space' || e.code === 'Enter') {
-                    startHandler();
-                }
-            };
-            
-            canvas.addEventListener('click', startHandler);
-            document.addEventListener('keydown', startKeyHandler);
-            
             gameLoop();
         }
+        
+        // Wait for page load, then show start countdown
+        window.addEventListener('load', () => {
+            gameState = 'waiting';
+            
+            // Create countdown element
+            const countdownEl = document.createElement('div');
+            countdownEl.id = 'startCountdown';
+            countdownEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4em;color:#00ff00;text-shadow:0 0 20px #00ff00;z-index:200;';
+            countdownEl.textContent = '3';
+            document.getElementById('gameContainer').appendChild(countdownEl);
+            
+            initAudio();
+            let count = 3;
+            const countdownInterval = setInterval(() => {
+                playSound('countdown');
+                count--;
+                if (count > 0) {
+                    countdownEl.textContent = count;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownEl.textContent = 'GO!';
+                    
+                    setTimeout(() => {
+                        countdownEl.remove();
+                        gameState = 'playing';
+                        gameStarted = true;
+                    }, 500);
+                }
+            }, 1000); // 1 second between counts
+        });
         
         function resetPlane() {
             plane.x = -30;
@@ -658,8 +663,8 @@
         }
         
         canvas.addEventListener('click', e => {
-            if (gameState !== 'playing' || !bombReady || bombs.length > 0) return;
-            initAudio(); // Initialize audio on first click
+            if (gameState !== 'playing' || !bombReady || bombs.length > 0 || !gameStarted) return;
+            initAudio();
             bombs.push({ x: plane.x, y: plane.y + 15 });
             bombReady = false;
             updateBombStatus();
@@ -667,7 +672,7 @@
         
         document.addEventListener('keydown', e => {
             if (e.code === 'Space') {
-                if (gameState !== 'playing' || !bombReady || bombs.length > 0) return;
+                if (gameState !== 'playing' || !bombReady || bombs.length > 0 || !gameStarted) return;
                 initAudio();
                 bombs.push({ x: plane.x, y: plane.y + 15 });
                 bombReady = false;
