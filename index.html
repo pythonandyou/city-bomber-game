@@ -160,7 +160,7 @@
         function generateBuildings() {
             buildings = [];
             let x = 0;
-            for (let i = 0; i < 15 + Math.floor(Math.random() * 5); i++) {
+            while (x < CANVAS_WIDTH - 40) { // Stop before edge of screen
                 const width = 35 + Math.random() * 15;
                 const height = 80 + Math.random() * 200;
                 buildings.push({
