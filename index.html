@@ -131,6 +131,7 @@
         function resetGorillas() {
             gorillas = [];
             const count = getGorillaCount();
+            console.log('Level', level, '- Creating', count, 'gorillas');
             for (let i = 0; i < count; i++) {
                 gorillas.push({
                     x: 50 + i * 150,
@@ -151,7 +152,9 @@
         
         function updateGorillaCount() {
             const alive = gorillas.filter(g => g.alive).length;
-            document.getElementById('gorillaCount').textContent = alive + '/' + gorillas.length;
+            const total = gorillas.length;
+            document.getElementById('gorillaCount').textContent = alive + '/' + total;
+            console.log('Gorillas alive:', alive, 'of', total);
         }
         
         function generateBuildings() {
