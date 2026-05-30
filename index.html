@@ -409,9 +409,9 @@
                     document.getElementById('nextLevel').textContent = level + 1;
                     // Check if new gorilla will be added
                     const currentGorillaCount = getGorillaCount();
-                    const newGorillaCount = 1 + Math.floor(level / 5);
-                    if (newGorillaCount > currentGorillaCount) {
-                        document.getElementById('newGorilla').textContent = `⚠️ New gorilla added! Total: ${newGorillaCount}`;
+                    const nextGorillaCount = 1 + Math.floor((level + 1) / 5);
+                    if (nextGorillaCount > currentGorillaCount) {
+                        document.getElementById('newGorilla').textContent = `⚠️ New gorilla added! Total: ${nextGorillaCount}`;
                     } else {
                         document.getElementById('newGorilla').textContent = '';
                     }
